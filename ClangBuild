@@ -1,0 +1,84 @@
+#!/opt/local/bin/python3.7
+
+from subprocess import call
+from os import path
+import argparse
+
+parser = argparse.ArgumentParser()
+
+parser.add_argument("file", type=str,
+                    help="source code file")
+parser.add_argument("-O", "--OpLevel", type=str,
+                    help="optimisation level ({full}, none, debug)",
+                    choices=["full", "none", "debug", "f", "n", "d"])
+parser.add_argument("-t", "--type", type=str,
+                    help="output binary type",
+                    choices=["binary", "library", "b", "l"])
+parser.add_argument("-o", "--output", type=str,
+                    help="output file name (default based on source code file name)")
+parser.add_argument("-s", "--sample",
+                    help="compile linking against cuda sample headers",
+                    action="store_true")
+parser.add_argument("-l", "--libs",
+                    help="extra libs to link against")
+parser.add_argument("-L", "--LibDirs",
+                    help="extra library dirs to search for links")
+parser.add_argument("-I", "--Include",
+                    help="extra paths to search for header files")
+parser.add_argument("-D", "--Define",
+                    help="define pre-compile macro variables")
+
+args = parser.parse_args()
+
+if args.OpLevel is "none" or args.OpLevel is "n":
+    opFlags = "-O0"
+elif args.OpLevel is "debug" or args.OpLevel is "d":
+    opFlags = "-O0 -g"
+else:
+    opFlags = "-Ofast"
+
+if args.output is None:
+    output = path.splitext(args.file)[0]
+else:
+    output = args.output
+
+if args.type is None or args.type is "binary" or args.type is "b":
+    outputType = "binary"
+else:
+    outputType = "library"
+
+includeFlags = " "
+
+linkerFlags = " "
+
+precompDefs = " "
+
+if args.OpLevel is "debug" or args.OpLevel is "d":
+    precompDefs += " -DDEBUG"
+
+if args.libs is not None:
+    for lib in args.libs.split(","):
+        linkerFlags += " -l" + lib
+
+if args.LibDirs is not None:
+    for lDir in args.LibDirs.split(","):
+        linkerFlags += " -L" + lDir
+
+if args.Include is not None:
+    for iDir in args.Include.split(","):
+        includeFlags += " -I" + iDir
+
+if args.Define is not None:
+    for Def in args.Define.split(","):
+        precompDefs += " -D" + Def
+
+def ExecCommand(command):
+    command = command.strip()
+    print("Executing command: '" + command + "'")
+    call(command.split())
+
+if outputType is "binary":
+    ExecCommand("/opt/local/bin/clang++ -std=c++14 -march=native " + opFlags + " -o " + output + " " + args.file + includeFlags + linkerFlags + precompDefs)
+else:
+    ExecCommand("/opt/local/bin/clang++ -std=c++14 -march=native " + opFlags + " -c -o " + output + ".o " + args.file + includeFlags + linkerFlags + precompDefs)
+    ExecCommand("ar r " + output + ".a " + output + ".o")

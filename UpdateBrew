@@ -1,0 +1,32 @@
+#!/opt/local/bin/python3.7
+
+from subprocess import call, Popen, PIPE
+from os import listdir
+import re
+
+call(['brew', '-v', 'update'])
+call(['brew', '-v', 'upgrade'])
+
+p = Popen(['brew', 'cask', 'list'], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+output, _ = p.communicate()
+
+output = [n for n in output.decode("utf-8").split('\n') if len(n) > 0]
+
+for cask in output:
+    installed = [d for d in listdir("/usr/local/Caskroom/" + cask) if d != '.metadata'][0]
+    p = Popen(['brew', 'cask', 'info', cask], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+    
+    info, _ = p.communicate()
+    info = info.decode("utf-8").split('\n')[0]
+
+    pattern = re.compile(r'' + cask + r':\s(?P<version>.+)')
+    info = pattern.match(info).group('version')
+
+    pattern = re.compile(r'(?P<version>.+)\s\(auto_updates\)')
+    info = pattern.match(info).group('version') if pattern.match(info) is not None else info 
+
+    if installed != info:
+        call(['brew', 'cask', 'reinstall', cask])
+
+call(['brew', 'cleanup'])
+call(['brew', 'cask', 'cleanup'])

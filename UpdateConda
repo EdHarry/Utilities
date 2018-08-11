@@ -1,0 +1,13 @@
+#!/opt/local/bin/python3.7
+
+from subprocess import call, Popen, PIPE
+
+p = Popen(['conda', 'info', '--envs'], stdin=PIPE, stdout=PIPE, stderr=PIPE)
+output, _ = p.communicate()
+
+output = [n.split(' ')[0] for n in output.decode("utf-8").split('\n')[2:] if len(n) > 0]
+
+for out in output:
+    call(['conda', 'update', '--all', '-y', '-n', out])
+
+call(['conda', 'clean', '--all', '-y'])
