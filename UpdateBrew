@@ -29,4 +29,3 @@ for cask in output:
         call(['brew', 'cask', 'reinstall', cask])
 
 call(['brew', 'cleanup'])
-call(['brew', 'cask', 'cleanup'])
